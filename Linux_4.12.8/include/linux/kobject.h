@@ -61,13 +61,14 @@ enum kobject_action {
 };
 
 struct kobject {
-	const char		*name;
-	struct list_head	entry;
+	const char			*name;		// 对象名称
+	struct list_head	entry;		// 用来连接平行关系中的kobject结构体对象
+									// 可以理解为同一级目录下的多个文件夹
 	struct kobject		*parent;
-	struct kset		*kset;
+	struct kset			*kset;
 	struct kobj_type	*ktype;
 	struct kernfs_node	*sd; /* sysfs directory entry */
-	struct kref		kref;
+	struct kref			kref;
 #ifdef CONFIG_DEBUG_KOBJECT_RELEASE
 	struct delayed_work	release;
 #endif
