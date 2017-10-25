@@ -367,7 +367,7 @@ static DEFINE_MUTEX(sched_hotcpu_mutex);
 
 static inline void check_preempt_curr(struct rq *rq, struct task_struct *p)
 {
-	rq->curr->sched_class->check_preempt_curr(rq, p);
+	rq->curr->sched_class->check_preempt_curr(rq, p);	// check_preempt_wakeup
 }
 
 static inline int cpu_of(struct rq *rq)
@@ -942,7 +942,7 @@ static void set_load_weight(struct task_struct *p)
 static void enqueue_task(struct rq *rq, struct task_struct *p, int wakeup)
 {
 	sched_info_queued(p);
-	p->sched_class->enqueue_task(rq, p, wakeup);
+	p->sched_class->enqueue_task(rq, p, wakeup);	// enqueue_task_fair
 	p->se.on_rq = 1;
 }
 
@@ -3490,7 +3490,7 @@ void scheduler_tick(void)
 	rq->tick_timestamp = rq->clock;
 	update_cpu_load(rq);
 	if (curr != rq->idle) /* FIXME: needed? */
-		curr->sched_class->task_tick(rq, curr);
+		curr->sched_class->task_tick(rq, curr);	// task_tick_fair
 	spin_unlock(&rq->lock);
 
 #ifdef CONFIG_SMP
@@ -3595,7 +3595,7 @@ pick_next_task(struct rq *rq, struct task_struct *prev)
 	 * the fair class we can call that function directly:
 	 */
 	if (likely(rq->nr_running == rq->cfs.nr_running)) {
-		p = fair_sched_class.pick_next_task(rq);
+		p = fair_sched_class.pick_next_task(rq);	// pick_next_task_fair
 		if (likely(p))
 			return p;
 	}

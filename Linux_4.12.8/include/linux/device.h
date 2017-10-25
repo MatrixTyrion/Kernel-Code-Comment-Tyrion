@@ -109,17 +109,18 @@ extern void bus_remove_file(struct bus_type *, struct bus_attribute *);
  * private data.
  */
 struct bus_type {
-	const char		*name;
+	const char		*name;			// 总线名称
 	const char		*dev_name;
 	struct device		*dev_root;
 	struct device_attribute	*dev_attrs;	/* use dev_groups instead */
+										/* 该总线下设备的属性  		      */
 	const struct attribute_group **bus_groups;
 	const struct attribute_group **dev_groups;
 	const struct attribute_group **drv_groups;
 
-	int (*match)(struct device *dev, struct device_driver *drv);
-	int (*uevent)(struct device *dev, struct kobj_uevent_env *env);
-	int (*probe)(struct device *dev);
+	int (*match)(struct device *dev, struct device_driver *drv);		// 该总线下设备与设备驱动的匹配函数
+	int (*uevent)(struct device *dev, struct kobj_uevent_env *env);		// 事件函数：热插拔
+	int (*probe)(struct device *dev);		// 总线下的探针函数
 	int (*remove)(struct device *dev);
 	void (*shutdown)(struct device *dev);
 
@@ -131,11 +132,12 @@ struct bus_type {
 
 	int (*num_vf)(struct device *dev);
 
-	const struct dev_pm_ops *pm;
+	const struct dev_pm_ops *pm;		// 电源管理相关
 
 	const struct iommu_ops *iommu_ops;
 
-	struct subsys_private *p;
+	struct subsys_private *p;			// 总线的私有数据
+										// p->subsys.kobj 表示该总线在驱动模型中对应的对象
 	struct lock_class_key lock_key;
 };
 
@@ -266,11 +268,11 @@ enum probe_type {
  * of any specific device.
  */
 struct device_driver {
-	const char		*name;
+	const char			*name;		// 驱动的名字
 	struct bus_type		*bus;
 
 	struct module		*owner;
-	const char		*mod_name;	/* used for built-in modules */
+	const char			*mod_name;	/* used for built-in modules */
 
 	bool suppress_bind_attrs;	/* disables bind/unbind via sysfs */
 	enum probe_type probe_type;
@@ -278,7 +280,7 @@ struct device_driver {
 	const struct of_device_id	*of_match_table;
 	const struct acpi_device_id	*acpi_match_table;
 
-	int (*probe) (struct device *dev);
+	int (*probe) (struct device *dev);			// 探针函数，当总线下的设备和驱动匹配成功之后就会执行 probe 函数
 	int (*remove) (struct device *dev);
 	void (*shutdown) (struct device *dev);
 	int (*suspend) (struct device *dev, pm_message_t state);
@@ -392,12 +394,12 @@ int subsys_virtual_register(struct bus_type *subsys,
  * connected or how they work.
  */
 struct class {
-	const char		*name;
-	struct module		*owner;
+	const char		*name;			// 类名
+	struct module	*owner;
 
-	struct class_attribute		*class_attrs;
+	struct class_attribute		*class_attrs;		// 类属性
 	const struct attribute_group	**class_groups;
-	const struct attribute_group	**dev_groups;
+	const struct attribute_group	**dev_groups;	// 类设备属性
 	struct kobject			*dev_kobj;
 
 	int (*dev_uevent)(struct device *dev, struct kobj_uevent_env *env);
@@ -413,7 +415,7 @@ struct class {
 	const struct kobj_ns_type_operations *ns_type;
 	const void *(*namespace)(struct device *dev);
 
-	const struct dev_pm_ops *pm;
+	const struct dev_pm_ops *pm;		// 类设备的电源管理
 
 	struct subsys_private *p;
 };
@@ -891,27 +893,25 @@ struct dev_links_info {
  * a higher-level representation of the device.
  */
 struct device {
-	struct device		*parent;
+	struct device			*parent;
 
 	struct device_private	*p;
 
-	struct kobject kobj;
-	const char		*init_name; /* initial name of the device */
-	const struct device_type *type;
+	struct kobject 			kobj;		// 包含一个 kobject 结构体，因为属于设备驱动模型中的一个对象
+	const char				*init_name; /* initial name of the device */
+	const struct device_type	*type;
 
-	struct mutex		mutex;	/* mutex to synchronize calls to
-					 * its driver.
-					 */
+	struct mutex			mutex;		/* mutex to synchronize calls to its driver. */
 
-	struct bus_type	*bus;		/* type of bus device is on */
-	struct device_driver *driver;	/* which driver has allocated this
-					   device */
-	void		*platform_data;	/* Platform specific data, device
-					   core doesn't touch it */
-	void		*driver_data;	/* Driver data, set and get with
-					   dev_set/get_drvdata */
+	struct bus_type			*bus;		/* type of bus device is on */
+	struct device_driver	*driver;	/* which driver has allocated this device */
+	void		*platform_data;			/* Platform specific data, device core doesn't touch it */
+	// 用来指向这个设备特有的数据结构，数据结构类型由自己定义
+	// 例如：led 驱动就使用这个自定义结构体来存放设备的 GPIO 信息，而没有使用总线下的资源结构体
+
+	void		*driver_data;			/* Driver data, set and get with dev_set/get_drvdata */
 	struct dev_links_info	links;
-	struct dev_pm_info	power;
+	struct dev_pm_info		power;
 	struct dev_pm_domain	*pm_domain;
 
 #ifdef CONFIG_GENERIC_MSI_IRQ_DOMAIN

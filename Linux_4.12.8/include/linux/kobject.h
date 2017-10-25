@@ -63,12 +63,12 @@ enum kobject_action {
 struct kobject {
 	const char			*name;		// 对象名称
 	struct list_head	entry;		// 用来连接平行关系中的kobject结构体对象
-									// 可以理解为同一级目录下的多个文件夹
-	struct kobject		*parent;
-	struct kset			*kset;
+									// 可以理解为将同一级目录下的多个文件夹或文件链接起来
+	struct kobject		*parent;	// 用来指向父类对象，也就是它的上一层文件夹所对应的对象
+	struct kset			*kset;		// 用来指向父类对象的 kset
 	struct kobj_type	*ktype;
-	struct kernfs_node	*sd; /* sysfs directory entry */
-	struct kref			kref;
+	struct kernfs_node	*sd;		// sysfs 文件系统目录
+	struct kref			kref;		// kobject 引用计数
 #ifdef CONFIG_DEBUG_KOBJECT_RELEASE
 	struct delayed_work	release;
 #endif
@@ -117,9 +117,9 @@ extern const void *kobject_namespace(struct kobject *kobj);
 extern char *kobject_get_path(struct kobject *kobj, gfp_t flag);
 
 struct kobj_type {
-	void (*release)(struct kobject *kobj);
-	const struct sysfs_ops *sysfs_ops;
-	struct attribute **default_attrs;
+	void (*release)(struct kobject *kobj);	// 用来清除 kobject 的引用计数
+	const struct sysfs_ops *sysfs_ops;		// 对象在 sysfs 中的操作方法，show、stroe
+	struct attribute **default_attrs;		// 对象在 sysfs 中的属性
 	const struct kobj_ns_type_operations *(*child_ns_type)(struct kobject *kobj);
 	const void *(*namespace)(struct kobject *kobj);
 };
@@ -169,9 +169,9 @@ struct sock;
  * desired.
  */
 struct kset {
-	struct list_head list;
+	struct list_head list;		// 用来链接该目录下的所有 kobject 对象
 	spinlock_t list_lock;
-	struct kobject kobj;
+	struct kobject kobj;		// 本目录对应的对象结构体
 	const struct kset_uevent_ops *uevent_ops;
 };
 
