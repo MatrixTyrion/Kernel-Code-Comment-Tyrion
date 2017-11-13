@@ -46,6 +46,9 @@ const void *kobject_namespace(struct kobject *kobj)
  * object registration that loops through the default attributes of the
  * subsystem and creates attributes files for them in sysfs.
  */
+/* 这是在对象注册期间调用的一个帮助器
+ * 它循环访问子系统的默认属性，并在sysfs中为它们创建属性文件
+ */
 static int populate_dir(struct kobject *kobj)
 {
 	struct kobj_type *t = get_ktype(kobj);
@@ -68,6 +71,7 @@ static int create_dir(struct kobject *kobj)
 	const struct kobj_ns_type_operations *ops;
 	int error;
 
+	// kobj->sd = (struct kernfs_node *)kn;
 	error = sysfs_create_dir_ns(kobj, kobject_namespace(kobj));
 	if (error)
 		return error;
@@ -357,6 +361,7 @@ static __printf(3, 0) int kobject_add_varg(struct kobject *kobj,
 {
 	int retval;
 
+	// kobj->name = (fmt, vargs)
 	retval = kobject_set_name_vargs(kobj, fmt, vargs);
 	if (retval) {
 		printk(KERN_ERR "kobject: can not set name properly!\n");

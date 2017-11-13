@@ -27,8 +27,8 @@ struct bin_attribute;
 enum kobj_ns_type;
 
 struct attribute {
-	const char		*name;
-	umode_t			mode;
+	const char		*name;		// 属性名称
+	umode_t			mode;		// 属性的读写权限
 #ifdef CONFIG_DEBUG_LOCK_ALLOC
 	bool			ignore_lockdep:1;
 	struct lock_class_key	*key;
@@ -207,8 +207,8 @@ struct bin_attribute bin_attr_##_name = __BIN_ATTR_RO(_name, _size)
 struct bin_attribute bin_attr_##_name = __BIN_ATTR_RW(_name, _size)
 
 struct sysfs_ops {
-	ssize_t	(*show)(struct kobject *, struct attribute *, char *);
-	ssize_t	(*store)(struct kobject *, struct attribute *, const char *, size_t);
+	ssize_t	(*show)(struct kobject *, struct attribute *, char *);						// 读属性
+	ssize_t	(*store)(struct kobject *, struct attribute *, const char *, size_t);		// 写属性
 };
 
 #ifdef CONFIG_SYSFS

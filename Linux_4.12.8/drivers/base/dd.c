@@ -515,6 +515,7 @@ int driver_probe_device(struct device_driver *drv, struct device *dev)
 {
 	int ret = 0;
 
+	// 如果设备没有注册到总线之上，就直接返回
 	if (!device_is_registered(dev))
 		return -ENODEV;
 

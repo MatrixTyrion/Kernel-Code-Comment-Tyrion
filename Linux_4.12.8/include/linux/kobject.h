@@ -61,19 +61,19 @@ enum kobject_action {
 };
 
 struct kobject {
-	const char			*name;		// 对象名称
+	const char			*name;		// 对象名称, 将作为一个目录的名字，在sysfs中显示
 	struct list_head	entry;		// 用来连接平行关系中的kobject结构体对象
 									// 可以理解为将同一级目录下的多个文件夹或文件链接起来
 	struct kobject		*parent;	// 用来指向父类对象，也就是它的上一层文件夹所对应的对象
 	struct kset			*kset;		// 用来指向父类对象的 kset
-	struct kobj_type	*ktype;
+	struct kobj_type	*ktype;		// kobject 相关的属性和操作函数
 	struct kernfs_node	*sd;		// sysfs 文件系统目录
 	struct kref			kref;		// kobject 引用计数
 #ifdef CONFIG_DEBUG_KOBJECT_RELEASE
 	struct delayed_work	release;
 #endif
-	unsigned int state_initialized:1;
-	unsigned int state_in_sysfs:1;
+	unsigned int state_initialized:1;	// 1:表明该kobject已经初始化了
+	unsigned int state_in_sysfs:1;		// kobject 是否已经在 sysfs 文件系统建立入口
 	unsigned int state_add_uevent_sent:1;
 	unsigned int state_remove_uevent_sent:1;
 	unsigned int uevent_suppress:1;
@@ -118,22 +118,24 @@ extern char *kobject_get_path(struct kobject *kobj, gfp_t flag);
 
 struct kobj_type {
 	void (*release)(struct kobject *kobj);	// 用来清除 kobject 的引用计数
+	// 当kobject的引用计数为0时，系统会自动调用自定义的 release()来释放kobject对象
 	const struct sysfs_ops *sysfs_ops;		// 对象在 sysfs 中的操作方法，show、stroe
 	struct attribute **default_attrs;		// 对象在 sysfs 中的属性
+					// struct attribute *default_attrs[];
 	const struct kobj_ns_type_operations *(*child_ns_type)(struct kobject *kobj);
 	const void *(*namespace)(struct kobject *kobj);
 };
 
 struct kobj_uevent_env {
 	char *argv[3];
-	char *envp[UEVENT_NUM_ENVP];
-	int envp_idx;
-	char buf[UEVENT_BUFFER_SIZE];
+	char *envp[UEVENT_NUM_ENVP];	// 一个保存其他环境变量定义的数组，NAME=value 的格式
+	int envp_idx;					// 环境变量数组中包含的变量个数
+	char buf[UEVENT_BUFFER_SIZE];	// 环境变量被编码后放入的缓冲区的指针
 	int buflen;
 };
 
 struct kset_uevent_ops {
-	int (* const filter)(struct kset *kset, struct kobject *kobj);
+	int (* const filter)(struct kset *kset, struct kobject *kobj);			// 决定是否将事件上报给用户空间
 	const char *(* const name)(struct kset *kset, struct kobject *kobj);
 	int (* const uevent)(struct kset *kset, struct kobject *kobj,
 		      struct kobj_uevent_env *env);
@@ -172,7 +174,7 @@ struct kset {
 	struct list_head list;		// 用来链接该目录下的所有 kobject 对象
 	spinlock_t list_lock;
 	struct kobject kobj;		// 本目录对应的对象结构体
-	const struct kset_uevent_ops *uevent_ops;
+	const struct kset_uevent_ops *uevent_ops;	// kset 的 uevent 事件
 };
 
 extern void kset_init(struct kset *kset);

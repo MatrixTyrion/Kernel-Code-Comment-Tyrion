@@ -1266,7 +1266,10 @@ static void klist_children_put(struct klist_node *n)
  */
 void device_initialize(struct device *dev)
 {
+	// 所有的设备都在这个名叫 devices_kset 的容器当中，可以称其为设备容器
 	dev->kobj.kset = devices_kset;
+
+	// 所有的设备都属于 device_ktype 类型的
 	kobject_init(&dev->kobj, &device_ktype);
 	INIT_LIST_HEAD(&dev->dma_pools);
 	mutex_init(&dev->mutex);

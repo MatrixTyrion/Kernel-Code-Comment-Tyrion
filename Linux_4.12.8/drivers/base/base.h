@@ -26,14 +26,14 @@
  * driver core should ever touch these fields.
  */
 struct subsys_private {
-	struct kset subsys;
-	struct kset *devices_kset;
+	struct kset subsys;			// 与该总线相关的子系统，里面的kobj是该bus的主obj，也就是最顶层
+	struct kset *devices_kset;	// 挂在该总线的所有设备的 kset
 	struct list_head interfaces;
 	struct mutex mutex;
 
-	struct kset *drivers_kset;
-	struct klist klist_devices;
-	struct klist klist_drivers;
+	struct kset *drivers_kset;	// 总线驱动程序的 kset
+	struct klist klist_devices;	// 与该总线相关的驱动程序链表
+	struct klist klist_drivers;	// 挂接在该总线的设备链表
 	struct blocking_notifier_head bus_notifier;
 	unsigned int drivers_autoprobe:1;
 	struct bus_type *bus;
@@ -44,8 +44,8 @@ struct subsys_private {
 #define to_subsys_private(obj) container_of(obj, struct subsys_private, subsys.kobj)
 
 struct driver_private {
-	struct kobject kobj;
-	struct klist klist_devices;
+	struct kobject kobj;			// 设备驱动内嵌的 kobject 对象
+	struct klist klist_devices;		// 当前驱动程序所能操作的设备链表
 	struct klist_node knode_bus;
 	struct module_kobject *mkobj;
 	struct device_driver *driver;

@@ -269,7 +269,7 @@ enum probe_type {
  */
 struct device_driver {
 	const char			*name;		// 驱动的名字
-	struct bus_type		*bus;
+	struct bus_type		*bus;		// 设备驱动所属的总线类型
 
 	struct module		*owner;
 	const char			*mod_name;	/* used for built-in modules */
@@ -893,8 +893,9 @@ struct dev_links_info {
  * a higher-level representation of the device.
  */
 struct device {
-	struct device			*parent;
-
+	struct device			*parent;	// 设备的"父设备"，该设备所属的设备
+										// 通常一个父设备是某种总线或者主控制器
+										// 如果parent是null，则该设备是顶层设备，比较少见
 	struct device_private	*p;
 
 	struct kobject 			kobj;		// 包含一个 kobject 结构体，因为属于设备驱动模型中的一个对象
@@ -903,7 +904,7 @@ struct device {
 
 	struct mutex			mutex;		/* mutex to synchronize calls to its driver. */
 
-	struct bus_type			*bus;		/* type of bus device is on */
+	struct bus_type			*bus;		// 表示该设备连接在何种类型的总线上
 	struct device_driver	*driver;	/* which driver has allocated this device */
 	void		*platform_data;			/* Platform specific data, device core doesn't touch it */
 	// 用来指向这个设备特有的数据结构，数据结构类型由自己定义
