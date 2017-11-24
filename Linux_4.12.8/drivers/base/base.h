@@ -32,8 +32,8 @@ struct subsys_private {
 	struct mutex mutex;
 
 	struct kset *drivers_kset;	// 总线驱动程序的 kset
-	struct klist klist_devices;	// 与该总线相关的驱动程序链表
-	struct klist klist_drivers;	// 挂接在该总线的设备链表
+	struct klist klist_devices;	// 挂接在该总线的设备链表
+	struct klist klist_drivers;	// 与该总线相关的驱动程序链表
 	struct blocking_notifier_head bus_notifier;
 	unsigned int drivers_autoprobe:1;
 	struct bus_type *bus;

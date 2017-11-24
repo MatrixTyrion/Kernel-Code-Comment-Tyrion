@@ -29,8 +29,8 @@
 #include <linux/workqueue.h>
 
 #define UEVENT_HELPER_PATH_LEN		256
-#define UEVENT_NUM_ENVP			32	/* number of env pointers */
-#define UEVENT_BUFFER_SIZE		2048	/* buffer for the variables */
+#define UEVENT_NUM_ENVP				32		/* number of env pointers */
+#define UEVENT_BUFFER_SIZE			2048	/* buffer for the variables */
 
 #ifdef CONFIG_UEVENT_HELPER
 /* path to the userspace helper executed on an event */
@@ -117,11 +117,13 @@ extern const void *kobject_namespace(struct kobject *kobj);
 extern char *kobject_get_path(struct kobject *kobj, gfp_t flag);
 
 struct kobj_type {
-	void (*release)(struct kobject *kobj);	// 用来清除 kobject 的引用计数
 	// 当kobject的引用计数为0时，系统会自动调用自定义的 release()来释放kobject对象
+	void (*release)(struct kobject *kobj);	// 用来清除 kobject 的引用计数
+
 	const struct sysfs_ops *sysfs_ops;		// 对象在 sysfs 中的操作方法，show、stroe
 	struct attribute **default_attrs;		// 对象在 sysfs 中的属性
 					// struct attribute *default_attrs[];
+
 	const struct kobj_ns_type_operations *(*child_ns_type)(struct kobject *kobj);
 	const void *(*namespace)(struct kobject *kobj);
 };

@@ -466,6 +466,7 @@ int bus_for_each_drv(struct bus_type *bus, struct device_driver *start,
 }
 EXPORT_SYMBOL_GPL(bus_for_each_drv);
 
+// 在 devices 目录下生成其对应 bus 的 dev_attrs 属性文件
 static int device_add_attrs(struct bus_type *bus, struct device *dev)
 {
 	int error = 0;
@@ -553,6 +554,7 @@ void bus_probe_device(struct device *dev)
 	if (!bus)
 		return;
 
+	// 只有在 bus->p->drivers_autoprobe 为 1 的情况下，才会去自己匹配
 	if (bus->p->drivers_autoprobe)
 		device_initial_probe(dev);
 
@@ -683,6 +685,11 @@ int bus_add_driver(struct device_driver *drv)
 
 	pr_debug("bus: '%s': add driver %s\n", bus->name, drv->name);
 
+
+	/*
+	 *
+	 *
+	 */
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
 		error = -ENOMEM;
@@ -890,31 +897,52 @@ int bus_register(struct bus_type *bus)
 	struct subsys_private *priv;
 	struct lock_class_key *key = &bus->lock_key;
 
+	// 为struct subsys_private的私有数据分配空间，
 	priv = kzalloc(sizeof(struct subsys_private), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
 
+	// 将subsys_private和bus_type关联起来
 	priv->bus = bus;
 	bus->p = priv;
 
 	BLOCKING_INIT_NOTIFIER_HEAD(&priv->bus_notifier);
 
+	/* 由于struct subsys_private也要在sysfs中表示一个节点
+	 * 因此，它也内嵌一个 kset 结构，priv->subsys
+	 * 设置kset名称为bus的名称
+	 */
 	retval = kobject_set_name(&priv->subsys.kobj, "%s", bus->name);
 	if (retval)
 		goto out;
 
+	/* 设置 bus 层次关系，指向总容器 : bus_kset
+	 * 设置 bus 在 sysfs 层的操作方法 : bus_ktype
+	 */
 	priv->subsys.kobj.kset = bus_kset;
 	priv->subsys.kobj.ktype = &bus_ktype;
 	priv->drivers_autoprobe = 1;
 
+	/* 将 priv->subsys 注册进入 sysfs
+	 * 注册之后，就会在 bus_kset 所表示的目录下创建一个总线名称的目录
+	 * 并且用户空间的 hotplug 应该会检测到一个 add 事件
+	 */
 	retval = kset_register(&priv->subsys);
 	if (retval)
 		goto out;
 
+	/* 就是在 bus_type->p->subsys.kobj 下建立一个普通属性文件
+	 * 属性文件在 sysfs 层的读写操作函数在 p->subsys.ktype 中 :  bus_ktype
+	 * 属性文件在 bus 层的读写操作函数在 struct bus_attribute bus_attr_uevent
+	 * static BUS_ATTR(uevent, S_IWUSR, NULL, bus_uevent_store);
+	 */
 	retval = bus_create_file(bus, &bus_attr_uevent);
 	if (retval)
 		goto bus_uevent_fail;
 
+	/* 会在 bus_type->p->subsys.kobj 下建立 devices、drivers 目录
+	 * 并初始化挂载设备和驱动的链表
+	 */
 	priv->devices_kset = kset_create_and_add("devices", NULL,
 						 &priv->subsys.kobj);
 	if (!priv->devices_kset) {
@@ -934,10 +962,12 @@ int bus_register(struct bus_type *bus)
 	klist_init(&priv->klist_devices, klist_devices_get, klist_devices_put);
 	klist_init(&priv->klist_drivers, NULL, NULL);
 
+	// 为 bus 创建 bus_attr_drivers_probe, bus_attr_drivers_autoprboe 文件
 	retval = add_probe_files(bus);
 	if (retval)
 		goto bus_probe_files_fail;
 
+	// 注册 bus->bus_groups 属性文件
 	retval = bus_add_groups(bus, bus->bus_groups);
 	if (retval)
 		goto bus_groups_fail;

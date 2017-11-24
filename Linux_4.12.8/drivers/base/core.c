@@ -1266,11 +1266,12 @@ static void klist_children_put(struct klist_node *n)
  */
 void device_initialize(struct device *dev)
 {
-	// 所有的设备都在这个名叫 devices_kset 的容器当中，可以称其为设备容器
+	/* 设置 dev 层次关系，指向总容器 : devices_kset
+	 * 设置 dev 在 sysfs 层的操作方法 : device_ktype
+	 */
 	dev->kobj.kset = devices_kset;
-
-	// 所有的设备都属于 device_ktype 类型的
 	kobject_init(&dev->kobj, &device_ktype);
+
 	INIT_LIST_HEAD(&dev->dma_pools);
 	mutex_init(&dev->mutex);
 	lockdep_set_novalidate_class(&dev->mutex);
@@ -1620,6 +1621,7 @@ int device_add(struct device *dev)
 	if (!dev)
 		goto done;
 
+	// 将 dev 和 device_private 关联起来
 	if (!dev->p) {
 		error = device_private_init(dev);
 		if (error)
@@ -1647,6 +1649,9 @@ int device_add(struct device *dev)
 
 	pr_debug("device: '%s': %s\n", dev_name(dev), __func__);
 
+	/* 如果注册 device 的时候，没有指定父结点
+	 * 则会在 /sys/device/ 下建立相同名称的目录
+	 */
 	parent = get_device(dev->parent);
 	kobj = get_device_parent(dev, parent);
 	if (kobj)
@@ -1658,6 +1663,7 @@ int device_add(struct device *dev)
 
 	/* first, register with generic layer. */
 	/* we require the name to be set before, and pass NULL */
+	// 将 dev->kobj 注册到 sysfs 中
 	error = kobject_add(&dev->kobj, dev->kobj.parent, NULL);
 	if (error) {
 		glue_dir = get_glue_dir(dev);
@@ -1668,6 +1674,7 @@ int device_add(struct device *dev)
 	if (platform_notify)
 		platform_notify(dev);
 
+	// 建立属性文件 : dev_attr_uevent
 	error = device_create_file(dev, &dev_attr_uevent);
 	if (error)
 		goto attrError;
@@ -1678,6 +1685,12 @@ int device_add(struct device *dev)
 	error = device_add_attrs(dev);
 	if (error)
 		goto AttrsError;
+
+	/* add a device to bus
+	 *- Add device's bus attributes.
+	 *- Create links to device's bus.
+	 *- Add the device to its bus's list of devices.
+	 */
 	error = bus_add_device(dev);
 	if (error)
 		goto BusError;
@@ -1705,6 +1718,10 @@ int device_add(struct device *dev)
 		blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
 					     BUS_NOTIFY_ADD_DEVICE, dev);
 
+	/* 产生一个 KOBJ_ADD 事件
+	 * 然后调用 bus_probe_device 去匹配已经注册到总线的驱动程序
+	 * 再将设备挂到父结点的子链表中
+	 */
 	kobject_uevent(&dev->kobj, KOBJ_ADD);
 	bus_probe_device(dev);
 	if (parent)

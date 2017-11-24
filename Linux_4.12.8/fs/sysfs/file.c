@@ -103,9 +103,12 @@ static ssize_t sysfs_kf_bin_read(struct kernfs_open_file *of, char *buf,
 }
 
 /* kernfs read callback for regular sysfs files with pre-alloc */
+
+
 static ssize_t sysfs_kf_read(struct kernfs_open_file *of, char *buf,
 			     size_t count, loff_t pos)
 {
+	// kn->parent->priv->kobj->ktype->sysfs_ops
 	const struct sysfs_ops *ops = sysfs_file_ops(of->kn);
 	struct kobject *kobj = of->kn->parent->priv;
 	ssize_t len;

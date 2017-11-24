@@ -280,7 +280,7 @@ struct device_driver {
 	const struct of_device_id	*of_match_table;
 	const struct acpi_device_id	*acpi_match_table;
 
-	int (*probe) (struct device *dev);			// 探针函数，当总线下的设备和驱动匹配成功之后就会执行 probe 函数
+	int (*probe) (struct device *dev);		// 探针函数，当总线下的设备和驱动匹配成功之后就会执行 probe 函数
 	int (*remove) (struct device *dev);
 	void (*shutdown) (struct device *dev);
 	int (*suspend) (struct device *dev, pm_message_t state);

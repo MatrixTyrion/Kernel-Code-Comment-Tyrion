@@ -244,6 +244,7 @@ static void driver_bound(struct device *dev)
 	pr_debug("driver: '%s': %s: bound to device '%s'\n", dev->driver->name,
 		 __func__, dev_name(dev));
 
+	// 将设备加至驱动的设备链表
 	klist_add_tail(&dev->p->knode_driver, &dev->driver->p->klist_devices);
 	device_links_driver_bound(dev);
 
@@ -269,9 +270,11 @@ static int driver_sysfs_add(struct device *dev)
 		blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
 					     BUS_NOTIFY_BIND_DRIVER, dev);
 
+	// 在驱动目录下建立一个指向设备的同名链接
 	ret = sysfs_create_link(&dev->driver->p->kobj, &dev->kobj,
 			  kobject_name(&dev->kobj));
 	if (ret == 0) {
+		// 在设备目录下建立一个名为 driver 指向驱动的链接
 		ret = sysfs_create_link(&dev->kobj, &dev->driver->p->kobj,
 					"driver");
 		if (ret)
@@ -349,6 +352,9 @@ static int really_probe(struct device *dev, struct device_driver *drv)
 		 drv->bus->name, __func__, drv->name, dev_name(dev));
 	WARN_ON(!list_empty(&dev->devres_head));
 
+	/* 先假设驱动和设备是匹配，为设备结构设置驱动成员
+	 * 使其指向匹配的驱动，然后调用 driver_sysfs_add 建立几个符号链接
+	 */
 re_probe:
 	dev->driver = drv;
 
@@ -381,6 +387,9 @@ re_probe:
 	 */
 	devices_kset_move_last(dev);
 
+	/* 先调用总线的 probe 函数
+	 * 如果总线的 probe 函数不存在，则会调用驱动的 probe 函数
+	 */
 	if (dev->bus->probe) {
 		ret = dev->bus->probe(dev);
 		if (ret)
@@ -415,6 +424,10 @@ re_probe:
 	if (dev->pm_domain && dev->pm_domain->sync)
 		dev->pm_domain->sync(dev);
 
+	/* 设备和驱动已经匹配成功了
+	 * 调用 driver_bound() 将其关联起来
+	 * 将设备加至驱动的设备链表
+	 */
 	driver_bound(dev);
 	ret = 1;
 	pr_debug("bus: '%s': %s: bound device %s to driver %s\n",
@@ -527,7 +540,7 @@ int driver_probe_device(struct device_driver *drv, struct device *dev)
 		pm_runtime_get_sync(dev->parent);
 
 	pm_runtime_barrier(dev);
-	ret = really_probe(dev, drv);
+	ret = really_probe(dev, drv);		// 匹配函数
 	pm_request_idle(dev);
 
 	if (dev->parent)
@@ -603,6 +616,10 @@ static int __device_attach_driver(struct device_driver *drv, void *_data)
 	if (dev->driver)
 		return -EBUSY;
 
+	/* 调用总线的 match() 函数进行匹配：drv->bus->match
+	 * 如果返回 0 说明匹配失败
+	 * 如果返回 1 说明初步的检查已经通过
+	 */
 	ret = driver_match_device(drv, dev);
 	if (ret == 0) {
 		/* no match */
@@ -623,6 +640,7 @@ static int __device_attach_driver(struct device_driver *drv, void *_data)
 	if (data->check_async && async_allowed != data->want_async)
 		return 0;
 
+	// 进入下一步匹配
 	return driver_probe_device(drv, dev);
 }
 
@@ -680,6 +698,9 @@ static int __device_attach(struct device *dev, bool allow_async)
 		if (dev->parent)
 			pm_runtime_get_sync(dev->parent);
 
+		/* 遍历总线之上的驱动，每遍历一个驱动就调用一次回调函数进行判断
+		 * 如果回调函数返回不为 0，就说明匹配已经成功了，不需要再匹配剩余的
+		 */
 		ret = bus_for_each_drv(dev->bus, NULL, &data,
 					__device_attach_driver);
 		if (!ret && allow_async && data.have_async) {

@@ -152,6 +152,7 @@ int driver_register(struct device_driver *drv)
 
 	BUG_ON(!drv->bus->p);
 
+	// 如果设备和总线定义了相同的成员函数，内核则优先使用 bus 中定义的
 	if ((drv->bus->probe && drv->probe) ||
 	    (drv->bus->remove && drv->remove) ||
 	    (drv->bus->shutdown && drv->shutdown))
@@ -165,6 +166,7 @@ int driver_register(struct device_driver *drv)
 		return -EBUSY;
 	}
 
+	// Add a driver to bus
 	ret = bus_add_driver(drv);
 	if (ret)
 		return ret;
