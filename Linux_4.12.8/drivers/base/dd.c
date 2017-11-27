@@ -270,6 +270,15 @@ static int driver_sysfs_add(struct device *dev)
 		blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
 					     BUS_NOTIFY_BIND_DRIVER, dev);
 
+	/* dev->kobj:/sys/devices/system/cpu/cpu0
+	 * dev->driver->p->kobj:/sys/bus/cpu/drivers/proccess/
+	 * Link:
+	 *  ||-- dev->kobj ==> dev->driver->p->kobj
+	 *	||    /sys/devices/system/cpu/cpu0/[driver] ->  /sys/bus/cpu/drivers/proccess/
+	 *  ||-- dev->driver->p->kobj ==> dev->kobj
+	 *  ||    /sys/bus/cpu/drivers/proccess/[cpu0]  ->  /sys/devices/system/cpu/cpu0
+	 */
+
 	// 在驱动目录下建立一个指向设备的同名链接
 	ret = sysfs_create_link(&dev->driver->p->kobj, &dev->kobj,
 			  kobject_name(&dev->kobj));

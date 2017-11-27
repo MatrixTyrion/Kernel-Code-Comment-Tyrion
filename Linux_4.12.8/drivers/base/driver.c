@@ -159,6 +159,9 @@ int driver_register(struct device_driver *drv)
 		printk(KERN_WARNING "Driver '%s' needs updating - please use "
 			"bus_type methods\n", drv->name);
 
+	/* 在驱动所在的总线上寻找是否已经存在以 drv->name 为名字的驱动
+	 * 如果已经存在，则不继续注册
+	 */
 	other = driver_find(drv->name, drv->bus);
 	if (other) {
 		printk(KERN_ERR "Error: Driver '%s' is already registered, "

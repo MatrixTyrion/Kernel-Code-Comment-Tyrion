@@ -511,12 +511,19 @@ int bus_add_device(struct device *dev)
 
 	if (bus) {
 		pr_debug("bus: '%s': add device %s\n", bus->name, dev_name(dev));
+
+		// 在 devices 目录下生成其对应 bus 的 dev_attrs 属性文件
 		error = device_add_attrs(bus, dev);
 		if (error)
 			goto out_put;
 		error = device_add_groups(dev, bus->dev_groups);
 		if (error)
 			goto out_id;
+
+		/* 生成链接文件
+		 * 1. 在 bus 下的 device 中生成指向设备目录的链接，名为 dev->init_name
+		 * 2. 在 device 下生成指向总线的链接，名为 subsystem
+		 */
 		error = sysfs_create_link(&bus->p->devices_kset->kobj,
 						&dev->kobj, dev_name(dev));
 		if (error)
@@ -686,9 +693,10 @@ int bus_add_driver(struct device_driver *drv)
 	pr_debug("bus: '%s': add driver %s\n", bus->name, drv->name);
 
 
-	/*
-	 *
-	 *
+	/* 初始化驱动的 driver_private 域
+	 * 使其内嵌的 kobject 的 kset 指向 bus 私有数据的 drivers_kset
+	 * - 将该驱动结构放入其所将驱动的设备所在总线的驱动容器当中
+	 * 为内嵌的 kobject 指定 ktype：driver_ktype
 	 */
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
@@ -699,12 +707,22 @@ int bus_add_driver(struct device_driver *drv)
 	priv->driver = drv;
 	drv->p = priv;
 	priv->kobj.kset = bus->p->drivers_kset;
+		/* 在调用 kobject_init_and_add 时将其父结构参数设置为 NULL
+		 * 则会把其父结构设置为 bus->p->drivers_kset.kobj
+		 * 并将该驱动加入对应设备连接的总线驱动链表上
+		 */
 	error = kobject_init_and_add(&priv->kobj, &driver_ktype, NULL,
 				     "%s", drv->name);
 	if (error)
 		goto out_unregister;
 
+	// 将驱动加至总线的驱动链表
 	klist_add_tail(&priv->knode_bus, &bus->p->klist_drivers);
+
+
+	/* 如果总线允许自动进行匹配
+	 * 则调用 driver_attach() 进行匹配过程
+	 */
 	if (drv->bus->p->drivers_autoprobe) {
 		if (driver_allows_async_probing(drv)) {
 			pr_debug("bus: '%s': probing driver %s asynchronously\n",
@@ -1302,10 +1320,16 @@ EXPORT_SYMBOL_GPL(subsys_virtual_register);
 
 int __init buses_init(void)
 {
+	/* 在 sysfs_root 下创建 bus 目录
+	 * 生成 bus 总容器 : bus_kset
+	 */
 	bus_kset = kset_create_and_add("bus", &bus_uevent_ops, NULL);
 	if (!bus_kset)
 		return -ENOMEM;
 
+	/* 在 sysfs_root 下创建 system 目录
+	 * 生成 system 总容器 : system_kset
+	 */
 	system_kset = kset_create_and_add("system", NULL, &devices_kset->kobj);
 	if (!system_kset)
 		return -ENOMEM;

@@ -111,7 +111,7 @@ extern void bus_remove_file(struct bus_type *, struct bus_attribute *);
 struct bus_type {
 	const char		*name;			// 总线名称
 	const char		*dev_name;
-	struct device		*dev_root;
+	struct device	*dev_root;
 	struct device_attribute	*dev_attrs;	/* use dev_groups instead */
 										/* 该总线下设备的属性  		      */
 	const struct attribute_group **bus_groups;
@@ -120,7 +120,7 @@ struct bus_type {
 
 	int (*match)(struct device *dev, struct device_driver *drv);		// 该总线下设备与设备驱动的匹配函数
 	int (*uevent)(struct device *dev, struct kobj_uevent_env *env);		// 事件函数：热插拔
-	int (*probe)(struct device *dev);		// 总线下的探针函数
+	int (*probe)(struct device *dev);									// 总线下的探针函数
 	int (*remove)(struct device *dev);
 	void (*shutdown)(struct device *dev);
 
