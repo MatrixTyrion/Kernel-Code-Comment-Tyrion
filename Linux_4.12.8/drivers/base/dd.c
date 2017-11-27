@@ -270,13 +270,14 @@ static int driver_sysfs_add(struct device *dev)
 		blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
 					     BUS_NOTIFY_BIND_DRIVER, dev);
 
-	/* dev->kobj:/sys/devices/system/cpu/cpu0
-	 * dev->driver->p->kobj:/sys/bus/cpu/drivers/proccess/
+	/* dev->kobj: /sys/devices/platform/serial8250/
+	 * dev->driver->p->kobj: /sys/bus/platform/driver/serial8250/
 	 * Link:
-	 *  ||-- dev->kobj ==> dev->driver->p->kobj
-	 *	||    /sys/devices/system/cpu/cpu0/[driver] ->  /sys/bus/cpu/drivers/proccess/
 	 *  ||-- dev->driver->p->kobj ==> dev->kobj
-	 *  ||    /sys/bus/cpu/drivers/proccess/[cpu0]  ->  /sys/devices/system/cpu/cpu0
+	 *  ||    /sys/bus/platform/driver/serial8250/[serial8250]  ->  /sys/devices/platform/serial8250/
+	 *	||
+	 *  ||-- dev->kobj ==> dev->driver->p->kobj
+	 *	||    /sys/devices/platform/serial8250/[driver] ->  /sys/bus/platform/driver/serial8250/
 	 */
 
 	// 在驱动目录下建立一个指向设备的同名链接

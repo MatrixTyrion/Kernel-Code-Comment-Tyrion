@@ -520,14 +520,23 @@ int bus_add_device(struct device *dev)
 		if (error)
 			goto out_id;
 
-		/* 生成链接文件
-		 * 1. 在 bus 下的 device 中生成指向设备目录的链接，名为 dev->init_name
-		 * 2. 在 device 下生成指向总线的链接，名为 subsystem
+		/* bus->p->devices_kset->kobj: /sys/bus/platform/serial8250/devices/
+		 * dev->kobj: /sys/devices/platform/
+		 * dev->bus->p->subsys.kobj: /sys/bus/platform/
+	 	 * Link:
+		 *  ||-- bus->p->devices_kset->kobj ==> dev->kobj
+		 *  ||    /sys/bus/platform/serial8250/devices/[serial8250]  ->  /sys/devices/platform/serial8250/
+		 *	||
+		 *  ||-- dev->kobj ==> dev->bus->p->subsys.kobj
+		 *	||    /sys/devices/platform/serial8250/[driver] ->  /sys/bus/platform/
 		 */
+
+		// 在 bus 下的 device 中生成指向设备目录的链接，名为 dev->init_name
 		error = sysfs_create_link(&bus->p->devices_kset->kobj,
 						&dev->kobj, dev_name(dev));
 		if (error)
 			goto out_groups;
+		// 在 device 下生成指向总线的链接，名为 subsystem
 		error = sysfs_create_link(&dev->kobj,
 				&dev->bus->p->subsys.kobj, "subsystem");
 		if (error)
@@ -706,7 +715,8 @@ int bus_add_driver(struct device_driver *drv)
 	klist_init(&priv->klist_devices, NULL, NULL);
 	priv->driver = drv;
 	drv->p = priv;
-	priv->kobj.kset = bus->p->drivers_kset;
+	priv->kobj.kset = bus->p->drivers_kset;	// 在 /sys/bus/[xxx]/driver/ 下建立 [yyy] 的驱动目录
+											// 此处为前提，设置层次关系
 		/* 在调用 kobject_init_and_add 时将其父结构参数设置为 NULL
 		 * 则会把其父结构设置为 bus->p->drivers_kset.kobj
 		 * 并将该驱动加入对应设备连接的总线驱动链表上
