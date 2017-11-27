@@ -26,7 +26,7 @@
  * driver core should ever touch these fields.
  */
 struct subsys_private {
-	struct kset subsys;			// 与该总线相关的子系统，里面的kobj是该bus的主obj，也就是最顶层
+	struct kset subsys;			// 与该总线相关的子系统，里面的kobj是该bus的主obj
 	struct kset *devices_kset;	// 挂在该总线的所有设备的 kset
 	struct list_head interfaces;
 	struct mutex mutex;

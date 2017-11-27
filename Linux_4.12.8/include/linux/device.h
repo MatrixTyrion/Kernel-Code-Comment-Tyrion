@@ -898,7 +898,7 @@ struct device {
 										// 如果parent是null，则该设备是顶层设备，比较少见
 	struct device_private	*p;
 
-	struct kobject 			kobj;		// 包含一个 kobject 结构体，因为属于设备驱动模型中的一个对象
+	struct kobject 			kobj;		// 包含一个 kobject 结构体
 	const char				*init_name; /* initial name of the device */
 	const struct device_type	*type;
 

@@ -541,6 +541,8 @@ int bus_add_device(struct device *dev)
 				&dev->bus->p->subsys.kobj, "subsystem");
 		if (error)
 			goto out_subsys;
+
+		// 将设备添加到总线的设备链表中
 		klist_add_tail(&dev->p->knode_bus, &bus->p->klist_devices);
 	}
 	return 0;
@@ -925,7 +927,7 @@ int bus_register(struct bus_type *bus)
 	struct subsys_private *priv;
 	struct lock_class_key *key = &bus->lock_key;
 
-	// 为struct subsys_private的私有数据分配空间，
+// 1. 初始化 subsys_private *priv
 	priv = kzalloc(sizeof(struct subsys_private), GFP_KERNEL);
 	if (!priv)
 		return -ENOMEM;
@@ -936,10 +938,7 @@ int bus_register(struct bus_type *bus)
 
 	BLOCKING_INIT_NOTIFIER_HEAD(&priv->bus_notifier);
 
-	/* 由于struct subsys_private也要在sysfs中表示一个节点
-	 * 因此，它也内嵌一个 kset 结构，priv->subsys
-	 * 设置kset名称为bus的名称
-	 */
+	// 设置 subsys_private->subsys.kobj 名字：/sys/bus/[xxx]
 	retval = kobject_set_name(&priv->subsys.kobj, "%s", bus->name);
 	if (retval)
 		goto out;
@@ -951,26 +950,20 @@ int bus_register(struct bus_type *bus)
 	priv->subsys.kobj.ktype = &bus_ktype;
 	priv->drivers_autoprobe = 1;
 
-	/* 将 priv->subsys 注册进入 sysfs
-	 * 注册之后，就会在 bus_kset 所表示的目录下创建一个总线名称的目录
-	 * 并且用户空间的 hotplug 应该会检测到一个 add 事件
-	 */
+// 2. 将 priv->subsys 注册进入 sysfs
 	retval = kset_register(&priv->subsys);
 	if (retval)
 		goto out;
 
-	/* 就是在 bus_type->p->subsys.kobj 下建立一个普通属性文件
-	 * 属性文件在 sysfs 层的读写操作函数在 p->subsys.ktype 中 :  bus_ktype
+// 3. 在 bus_type->p->subsys.kobj 下创建一个普通属性文件：uevent
+	/* 属性文件在 sysfs 层的读写操作函数在 p->subsys.ktype 中 :	bus_ktype
 	 * 属性文件在 bus 层的读写操作函数在 struct bus_attribute bus_attr_uevent
-	 * static BUS_ATTR(uevent, S_IWUSR, NULL, bus_uevent_store);
 	 */
 	retval = bus_create_file(bus, &bus_attr_uevent);
 	if (retval)
 		goto bus_uevent_fail;
 
-	/* 会在 bus_type->p->subsys.kobj 下建立 devices、drivers 目录
-	 * 并初始化挂载设备和驱动的链表
-	 */
+// 4. 在 /sys/bus/[XXX]/ 下建立 devices、drivers 目录
 	priv->devices_kset = kset_create_and_add("devices", NULL,
 						 &priv->subsys.kobj);
 	if (!priv->devices_kset) {
@@ -985,12 +978,13 @@ int bus_register(struct bus_type *bus)
 		goto bus_drivers_fail;
 	}
 
+// 5. 初始化总线对应的 "设备链表" 和 "驱动链表"
 	INIT_LIST_HEAD(&priv->interfaces);
 	__mutex_init(&priv->mutex, "subsys mutex", key);
 	klist_init(&priv->klist_devices, klist_devices_get, klist_devices_put);
 	klist_init(&priv->klist_drivers, NULL, NULL);
 
-	// 为 bus 创建 bus_attr_drivers_probe, bus_attr_drivers_autoprboe 文件
+// 6. 在 /sys/bus/[xxx]/ 下创建 drivers_probe、drivers_autoporbe 文件
 	retval = add_probe_files(bus);
 	if (retval)
 		goto bus_probe_files_fail;

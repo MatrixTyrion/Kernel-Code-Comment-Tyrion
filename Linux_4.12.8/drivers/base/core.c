@@ -1266,10 +1266,10 @@ static void klist_children_put(struct klist_node *n)
  */
 void device_initialize(struct device *dev)
 {
-	/* 设置 dev 层次关系，指向总容器 : devices_kset
-	 * 设置 dev 在 sysfs 层的操作方法 : device_ktype
-	 */
+	// 1. 设置 device 层次关系，指向总容器：devices_kset
 	dev->kobj.kset = devices_kset;
+
+	// 2. 设置 device 在 sysfs 层的操作方法：device_ktype
 	kobject_init(&dev->kobj, &device_ktype);
 
 	INIT_LIST_HEAD(&dev->dma_pools);
@@ -1621,7 +1621,7 @@ int device_add(struct device *dev)
 	if (!dev)
 		goto done;
 
-	// 将 dev 和 device_private 关联起来
+	// 1. device_private_init：将 device 和 device_private 关联起来
 	if (!dev->p) {
 		error = device_private_init(dev);
 		if (error)
@@ -1633,6 +1633,7 @@ int device_add(struct device *dev)
 	 * some day, we need to initialize the name. We prevent reading back
 	 * the name, and force the use of dev_name()
 	 */
+	// 2. 设置 device->kobj->name
 	if (dev->init_name) {
 		dev_set_name(dev, "%s", dev->init_name);
 		dev->init_name = NULL;
@@ -1649,8 +1650,9 @@ int device_add(struct device *dev)
 
 	pr_debug("device: '%s': %s\n", dev_name(dev), __func__);
 
-	/* 如果注册 device 的时候，没有指定父结点
-	 * 则会在 /sys/device/ 下建立相同名称的目录
+	/* 3. 通过 device->parent 获取设备关系
+	 *    || 如果注册 device 的时候，没有指定父结点
+	 *    || 则会在 /sys/device/ 下建立相同名称的目录
 	 */
 	parent = get_device(dev->parent);
 	kobj = get_device_parent(dev, parent);
@@ -1663,7 +1665,7 @@ int device_add(struct device *dev)
 
 	/* first, register with generic layer. */
 	/* we require the name to be set before, and pass NULL */
-	// 将 dev->kobj 注册到 sysfs 中
+	// 4. 将 device 注册到 sysfs 中
 	error = kobject_add(&dev->kobj, dev->kobj.parent, NULL);
 	if (error) {
 		glue_dir = get_glue_dir(dev);
@@ -1674,7 +1676,7 @@ int device_add(struct device *dev)
 	if (platform_notify)
 		platform_notify(dev);
 
-	// 建立属性文件 : dev_attr_uevent
+	// 5. 在 dev->kobj 下创建一个普通属性文件：uevent
 	error = device_create_file(dev, &dev_attr_uevent);
 	if (error)
 		goto attrError;
@@ -1691,6 +1693,7 @@ int device_add(struct device *dev)
 	 *- Create links to device's bus.
 	 *- Add the device to its bus's list of devices.
 	 */
+	// 6. bus_add_device：将设备加入总线
 	error = bus_add_device(dev);
 	if (error)
 		goto BusError;
@@ -1718,13 +1721,12 @@ int device_add(struct device *dev)
 		blocking_notifier_call_chain(&dev->bus->p->bus_notifier,
 					     BUS_NOTIFY_ADD_DEVICE, dev);
 
-	/* 产生一个 KOBJ_ADD 事件
-	 * 然后调用 bus_probe_device 去匹配已经注册到总线的驱动程序
-	 * 再将设备挂到父结点的子链表中
-	 */
+	// 7. 生成一个 KOBJ_ADD 热插拔事件
 	kobject_uevent(&dev->kobj, KOBJ_ADD);
+
+	// 8. bus_probe_device(dev)：匹配已经注册到设备对应总线上的驱动
 	bus_probe_device(dev);
-	if (parent)
+	if (parent)	// 9. 匹配成功后，再将设备挂接到父设备节点的子链表中
 		klist_add_tail(&dev->p->knode_parent,
 			       &parent->p->klist_children);
 
@@ -1790,11 +1792,13 @@ EXPORT_SYMBOL_GPL(device_add);
  * if it returned an error! Always use put_device() to give up the
  * reference initialized in this function instead.
  */
+
 int device_register(struct device *dev)
 {
 	device_initialize(dev);
 	return device_add(dev);
 }
+
 EXPORT_SYMBOL_GPL(device_register);
 
 /**
@@ -2081,15 +2085,19 @@ EXPORT_SYMBOL_GPL(device_find_child);
 
 int __init devices_init(void)
 {
+	// 1. 生成 devices 总容器：devices_kset
 	devices_kset = kset_create_and_add("devices", &device_uevent_ops, NULL);
 	if (!devices_kset)
 		return -ENOMEM;
+	// 2. 生成 dev 总容器：dev_kobj
 	dev_kobj = kobject_create_and_add("dev", NULL);
 	if (!dev_kobj)
 		goto dev_kobj_err;
+	// 3. 生成 block kobject：sysfs_dev_block_kobj
 	sysfs_dev_block_kobj = kobject_create_and_add("block", dev_kobj);
 	if (!sysfs_dev_block_kobj)
 		goto block_kobj_err;
+	// 4. 生成 char kobject：sysfs_dev_char_kobj
 	sysfs_dev_char_kobj = kobject_create_and_add("char", dev_kobj);
 	if (!sysfs_dev_char_kobj)
 		goto char_kobj_err;
