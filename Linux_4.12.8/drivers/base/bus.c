@@ -520,12 +520,12 @@ int bus_add_device(struct device *dev)
 		if (error)
 			goto out_id;
 
-		/* bus->p->devices_kset->kobj: /sys/bus/platform/serial8250/devices/
+		/* bus->p->devices_kset->kobj: /sys/bus/platform/devices/
 		 * dev->kobj: /sys/devices/platform/
 		 * dev->bus->p->subsys.kobj: /sys/bus/platform/
 	 	 * Link:
 		 *  ||-- bus->p->devices_kset->kobj ==> dev->kobj
-		 *  ||    /sys/bus/platform/serial8250/devices/[serial8250]  ->  /sys/devices/platform/serial8250/
+		 *  ||    /sys/bus/platform/devices/[serial8250]  ->  /sys/devices/platform/serial8250/
 		 *	||
 		 *  ||-- dev->kobj ==> dev->bus->p->subsys.kobj
 		 *	||    /sys/devices/platform/serial8250/[driver] ->  /sys/bus/platform/
@@ -704,10 +704,10 @@ int bus_add_driver(struct device_driver *drv)
 	pr_debug("bus: '%s': add driver %s\n", bus->name, drv->name);
 
 
-	/* 初始化驱动的 driver_private 域
-	 * 使其内嵌的 kobject 的 kset 指向 bus 私有数据的 drivers_kset
-	 * - 将该驱动结构放入其所将驱动的设备所在总线的驱动容器当中
-	 * 为内嵌的 kobject 指定 ktype：driver_ktype
+	/* 1. 初始化驱动的 driver_private 域
+	 *    使其内嵌的 kobject 的 kset 指向 bus 私有数据的 drivers_kset
+	 *    - 将该驱动结构放入其所将驱动的设备所在总线的驱动容器当中
+	 *    为内嵌的 kobject 指定 ktype：driver_ktype
 	 */
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
 	if (!priv) {
@@ -728,12 +728,12 @@ int bus_add_driver(struct device_driver *drv)
 	if (error)
 		goto out_unregister;
 
-	// 将驱动加至总线的驱动链表
+	// 2. 将驱动加至总线的驱动链表
 	klist_add_tail(&priv->knode_bus, &bus->p->klist_drivers);
 
 
-	/* 如果总线允许自动进行匹配
-	 * 则调用 driver_attach() 进行匹配过程
+	/* 3. 如果总线允许自动进行匹配
+	 *    则调用 driver_attach() 进行匹配过程
 	 */
 	if (drv->bus->p->drivers_autoprobe) {
 		if (driver_allows_async_probing(drv)) {
