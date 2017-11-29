@@ -180,6 +180,10 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
 	pr_debug("kobject: '%s' (%p): %s\n",
 		 kobject_name(kobj), kobj, __func__);
 
+	/* 对事件的处理函数包含在 kobject->kset->uevent_ops 中
+	 * 要处理事件，就必须要找到上层的一个不为空的 kset
+	 * 顺着 kobject->parent 找不到一个不为空的 kset
+	 */
 	/* search the kset we belong to */
 	top_kobj = kobj;
 	while (!top_kobj->kset && top_kobj->parent)
@@ -202,6 +206,8 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
 				 kobject_name(kobj), kobj, __func__);
 		return 0;
 	}
+
+	// 调用 filter，查看当前事件是否被过滤掉了
 	/* skip the event, if the filter returns zero. */
 	if (uevent_ops && uevent_ops->filter)
 		if (!uevent_ops->filter(kset, kobj)) {
@@ -211,6 +217,7 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
 			return 0;
 		}
 
+	// 调用 name 获得子系统的名称
 	/* originating subsystem */
 	if (uevent_ops && uevent_ops->name)
 		subsystem = uevent_ops->name(kset, kobj);
@@ -223,6 +230,12 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
 		return 0;
 	}
 
+
+	/* 设置环境变量
+	 * · kobject_get_path()：获得引起事件的 kobject 在 sysfs 中的路径
+	 * · add_uevent_var()：将动作代表的字串、kobject路径、子系统名称添加到 kobj_uevent_env 中
+	 * · 如果还有指定的环境变量，也将其添加进去
+	 */
 	/* environment buffer */
 	env = kzalloc(sizeof(struct kobj_uevent_env), GFP_KERNEL);
 	if (!env)
@@ -255,6 +268,7 @@ int kobject_uevent_env(struct kobject *kobj, enum kobject_action action,
 		}
 	}
 
+	// 调用 uevent 函数
 	/* let the kset specific function add its stuff */
 	if (uevent_ops && uevent_ops->uevent) {
 		retval = uevent_ops->uevent(kset, kobj, env);
@@ -371,6 +385,10 @@ EXPORT_SYMBOL_GPL(kobject_uevent_env);
  */
 int kobject_uevent(struct kobject *kobj, enum kobject_action action)
 {
+	/* kobj：引起事件的 kobject
+	 * action：事件类型
+	 * envp_ext：要添加的环境变量
+	 */
 	return kobject_uevent_env(kobj, action, NULL);
 }
 EXPORT_SYMBOL_GPL(kobject_uevent);
